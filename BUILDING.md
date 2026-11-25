@@ -2,13 +2,53 @@
 
 ## 环境
 
-1. 准备与 LineageOS 24.0 匹配的 Android 构建环境。
-2. 同步对应的 GKI 内核源码、设备树、工具链与依赖。
-3. 根据设备实际代号、内核分支和厂商要求更新构建变量。
-4. 确认 Sukisu-Nova 所需的补丁、配置项和版本约束。
+1. 准备与 LineageOS 24.0 匹配的 Linux Android 构建环境。
+2. 安装官方 LineageOS 构建依赖、`repo`、Git LFS、Python 和 `ccache`。
+3. 预留足够的磁盘空间、内存和网络带宽。完整 Android 源码不放在本仓库中。
 
-## 建议
+## 自动准备源码
 
-将本地构建产物放在 `out/`，该目录已被 `.gitignore` 忽略。不要把私有密钥、签名材料或未经确认的厂商专有文件提交到公开仓库。
+在本仓库目录执行：
 
-具体构建命令应以当前使用的 LineageOS、GKI 内核分支和设备树文档为准。
+```bash
+./scripts/build-lineage-ktm.sh
+```
+
+也可以用 `LINEAGE_TOP` 指定源码目录：
+
+```bash
+LINEAGE_TOP="$HOME/android/lineage" ./scripts/build-lineage-ktm.sh
+```
+
+脚本会初始化并同步 `lineage-24.0`，执行 `breakfast ktm`，然后提示提取专有文件和启动构建。
+
+## 集成 SukiSU Nova
+
+完成 `breakfast ktm` 后，在本仓库目录执行：
+
+```bash
+./scripts/integrate-sukisu-nova.sh
+```
+
+脚本默认处理 `kernel/oneplus/sm8750`，使用 SukiSU Nova 官方 `main` 集成路径。集成后请检查内核配置，再运行：
+
+```bash
+cd "$HOME/android/lineage"
+source build/envsetup.sh
+brunch ktm
+```
+
+## 专有文件
+
+官方设备指南要求从正在运行相同 LineageOS 分支的设备提取专有文件：
+
+```bash
+cd device/oneplus/ktm
+./extract-files.py
+```
+
+如果设备目录中使用的是 shell 脚本，则改用 `./extract-files.sh`。也可以按照 LineageOS 官方文档从可安装 ZIP 提取。
+
+## 安全提醒
+
+刷写或启动自定义内核存在数据丢失、无法启动及保修影响等风险。操作前备份数据，并确认文件适用于自己的设备。不要把私钥、签名材料、专有 blobs 或构建产物提交到公开仓库。

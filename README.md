@@ -12,7 +12,16 @@
 
 本仓库已初始化为项目入口。开始编译前，请同步与目标设备、Android 版本和内核分支匹配的源码、设备树及工具链，并根据实际设备代号更新配置。
 
-详细准备事项见 [`BUILDING.md`](BUILDING.md)。
+## 快速开始
+
+先阅读 [`BUILDING.md`](BUILDING.md)，然后在 Linux Android 构建环境中运行：
+
+```bash
+./scripts/build-lineage-ktm.sh
+./scripts/integrate-sukisu-nova.sh
+```
+
+上游仓库和版本基线记录在 [`SOURCES.md`](SOURCES.md)。
 
 ## 免责声明
 
