@@ -39,6 +39,11 @@ jobs:
       ARCH: arm64
       LLVM: 1
       LLVM_IAS: 1
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_COMPILERCHECK: content
+      CC: ccache clang
+      HOSTCC: ccache gcc
+      HOSTCXX: ccache g++
     steps:
       - name: Checkout build configuration
         uses: actions/checkout@v4
@@ -53,7 +58,7 @@ jobs:
       - name: Restore ccache
         uses: actions/cache@v4
         with:
-          path: ~/.cache/ccache
+          path: .ccache
           key: ccache-ktm-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
             ccache-ktm-${{ runner.os }}-
@@ -61,8 +66,9 @@ jobs:
       - name: Configure ccache
         run: |
           sudo apt-get install -y --no-install-recommends ccache
-          mkdir -p "$HOME/.cache/ccache"
-          ccache --set-config=cache_dir="$HOME/.cache/ccache"
+          mkdir -p "$CCACHE_DIR"
+          ccache --set-config=cache_dir="$CCACHE_DIR"
+          ccache --set-config=compiler_check=content
           ccache --set-config=max_size=5G
           ccache --zero-stats
 
