@@ -1,10 +1,15 @@
-name: Build ktm kernel (SukiSU-Nova + AnyKernel3)
+name: Build ktm kernel (SukiSU-Nova + SUSFS + AnyKernel3)
 
 on:
   workflow_dispatch:
     inputs:
       sukisu_nova:
         description: Integrate SukiSU-Nova main branch
+        required: true
+        default: true
+        type: boolean
+      susfs:
+        description: Integrate SUSFS via SukiSU-Nova builtin branch
         required: true
         default: true
         type: boolean
@@ -64,12 +69,18 @@ jobs:
           git clone --depth=1 --branch "$KERNEL_BRANCH" "$KERNEL_REPO" kernel
           git -C kernel log -1 --oneline
 
-      - name: Integrate SukiSU-Nova
+      - name: Integrate SukiSU-Nova and optional SUSFS
         if: inputs.sukisu_nova == true
         working-directory: kernel
         run: |
-          curl -LSs 'https://git.zako.shirkneko.top:20004/shirkneko/SukiSU/raw/branch/main/kernel/setup.sh' \
-            | bash -s builtin-new
+          if [ "${{ inputs.susfs }}" = 'true' ]; then
+            # The official guide states that the builtin branch carries SUSFS.
+            curl -LSs 'https://git.zako.shirkneko.top:20004/shirkneko/SukiSU/raw/branch/main/kernel/setup.sh' \
+              | bash -s builtin
+          else
+            curl -LSs 'https://git.zako.shirkneko.top:20004/shirkneko/SukiSU/raw/branch/main/kernel/setup.sh' \
+              | bash -s builtin-new
+          fi
 
       - name: Configure kernel
         working-directory: kernel
@@ -86,13 +97,19 @@ jobs:
             scripts/config --file out/.config --enable EXT4_FS
             scripts/config --file out/.config --enable KSU
           fi
+          if [ "${{ inputs.susfs }}" = 'true' ]; then
+            chmod +x scripts/config
+            scripts/config --file out/.config --enable KSU_SUSFS
+            # ARM64 4.19+ can use this hook mode instead of manual fs hooks.
+            scripts/config --file out/.config --enable KSU_HACK_ARM64_BRANCH_LINK
+          fi
           if [ "${{ inputs.kpm }}" = 'true' ]; then
             chmod +x scripts/config
             scripts/config --file out/.config --enable KPM
           fi
           make O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
             CROSS_COMPILE="$CROSS_COMPILE" olddefconfig
-          grep -E 'CONFIG_(KPROBES|EXT4_FS|KSU|KPM)=' out/.config || true
+          grep -E 'CONFIG_(KPROBES|EXT4_FS|KSU|KPM|KSU_SUSFS)=' out/.config || true
 
       - name: Build kernel Image
         working-directory: kernel

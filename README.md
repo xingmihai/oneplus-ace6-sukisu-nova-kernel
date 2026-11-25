@@ -25,7 +25,7 @@
 
 ## GitHub Actions 编译
 
-打开仓库的 **Actions → Build ktm kernel (SukiSU-Nova + AnyKernel3) → Run workflow**。默认会集成 SukiSU-Nova 并生成 `AnyKernel3-ktm-*.zip`。`CONFIG_KPM` 默认关闭；只有明确需要 KPM 时再手动开启。
+打开仓库的 **Actions → Build ktm kernel (SukiSU-Nova + SUSFS + AnyKernel3) → Run workflow**。默认会集成 SukiSU-Nova、SUSFS，并生成 `AnyKernel3-ktm-*.zip`。`CONFIG_KPM` 默认关闭；只有明确需要 KPM 时再手动开启。
 
 工作流使用官方 LineageOS `android_kernel_oneplus_sm8750` 的 `lineage-24.0` 分支，编译 `arm64` GKI `Image`，再放入官方 AnyKernel3 模板打包。产物会作为 GitHub Actions artifact 提供下载。
 
