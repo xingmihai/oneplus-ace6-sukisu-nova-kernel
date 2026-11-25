@@ -34,6 +34,7 @@ jobs:
       KERNEL_REPO: https://github.com/LineageOS/android_kernel_oneplus_sm8750.git
       KERNEL_BRANCH: lineage-24.0
       AK3_REPO: https://github.com/osm0sis/AnyKernel3.git
+      AK3_ARM64_BRANCH: arm64-tools
       SUSFS_REF: gki-android15-6.6
       ARCH: arm64
       LLVM: 1
@@ -148,7 +149,13 @@ jobs:
       - name: Prepare AnyKernel3
         run: |
           git clone --depth=1 "$AK3_REPO" anykernel3
-          rm -rf anykernel3/.git
+          # The default AK3 branch ships 32-bit ARM tools. Ace 6 is arm64,
+          # so replace the bundled binaries with the official AArch64 set.
+          git clone --depth=1 --branch "$AK3_ARM64_BRANCH" "$AK3_REPO" ak3-arm64-tools
+          cp ak3-arm64-tools/* anykernel3/tools/
+          readelf -h anykernel3/tools/busybox | grep -E 'Class:.*ELF64|Machine:.*AArch64'
+          readelf -h anykernel3/tools/magiskboot | grep -E 'Class:.*ELF64|Machine:.*AArch64'
+          rm -rf anykernel3/.git ak3-arm64-tools/.git
           cp anykernel/anykernel.sh anykernel3/anykernel.sh
           cp kernel/oneplus/sm8750/out/arch/arm64/boot/Image anykernel3/Image
           cp README.md anykernel3/README-project.md
