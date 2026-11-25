@@ -34,6 +34,7 @@ jobs:
       KERNEL_REPO: https://github.com/LineageOS/android_kernel_oneplus_sm8750.git
       KERNEL_BRANCH: lineage-24.0
       AK3_REPO: https://github.com/osm0sis/AnyKernel3.git
+      SUSFS_REF: gki-android15-6.6
       ARCH: arm64
       LLVM: 1
       LLVM_IAS: 1
@@ -92,6 +93,21 @@ jobs:
               | bash -s builtin-new
           fi
 
+      - name: Apply SUSFS 6.6 kernel patch
+        if: inputs.susfs == true
+        working-directory: kernel/oneplus/sm8750
+        run: |
+          git clone --depth=1 --branch "$SUSFS_REF" \
+            https://gitlab.com/simonpunk/susfs4ksu.git susfs4ksu
+          cp susfs4ksu/kernel_patches/fs/susfs.c fs/
+          cp susfs4ksu/kernel_patches/include/linux/susfs.h \
+            susfs4ksu/kernel_patches/include/linux/susfs_def.h include/linux/
+          patch --batch --forward -p1 \
+            < susfs4ksu/kernel_patches/50_add_susfs_in_gki-android15-6.6.patch
+          test -f include/linux/susfs.h
+          test -f include/linux/susfs_def.h
+          test -f fs/susfs.c
+
       - name: Configure kernel
         working-directory: kernel/oneplus/sm8750
         run: |
@@ -111,8 +127,6 @@ jobs:
           if [ "${{ inputs.susfs }}" = 'true' ]; then
             chmod +x scripts/config
             scripts/config --file out/.config --enable KSU_SUSFS
-            # ARM64 4.19+ can use this hook mode instead of manual fs hooks.
-            scripts/config --file out/.config --enable KSU_HACK_ARM64_BRANCH_LINK
           fi
           if [ "${{ inputs.kpm }}" = 'true' ]; then
             chmod +x scripts/config
@@ -147,7 +161,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ktm-kernel-Image-${{ github.sha }}
-          path: kernel/out/arch/arm64/boot/Image
+          path: kernel/oneplus/sm8750/out/arch/arm64/boot/Image
           if-no-files-found: error
           retention-days: 14
 
