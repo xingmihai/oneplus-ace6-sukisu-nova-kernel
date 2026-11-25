@@ -121,12 +121,14 @@ jobs:
         working-directory: kernel/oneplus/sm8750
         run: |
           if [ "${{ inputs.susfs }}" = 'true' ]; then
-            # The official guide states that the builtin branch carries SUSFS.
+            # The builtin branch carries SUSFS and uses source-level hooks.
             curl -LSs 'https://git.zako.shirkneko.top:20004/shirkneko/SukiSU/raw/branch/main/kernel/setup.sh' \
               | bash -s builtin
           else
+            # GKI without SUSFS should use the main Kprobes branch. The
+            # builtin-new branch requires additional manual hook call-sites.
             curl -LSs 'https://git.zako.shirkneko.top:20004/shirkneko/SukiSU/raw/branch/main/kernel/setup.sh' \
-              | bash -s builtin-new
+              | bash -s main
           fi
 
       - name: Apply SUSFS 6.6 kernel patch
