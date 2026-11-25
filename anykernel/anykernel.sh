@@ -25,4 +25,3 @@ PATCH_VBMETA_FLAG=auto;
 . tools/ak3-core.sh;
 split_boot; # preserve the existing ramdisk
 flash_boot;
-EOF

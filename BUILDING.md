@@ -52,3 +52,9 @@ cd device/oneplus/ktm
 ## 安全提醒
 
 刷写或启动自定义内核存在数据丢失、无法启动及保修影响等风险。操作前备份数据，并确认文件适用于自己的设备。不要把私钥、签名材料、专有 blobs 或构建产物提交到公开仓库。
+
+## 刷写方式
+
+AnyKernel3 ZIP 包含官方 `magiskboot` 和 ARM64 BusyBox。若 SukiSU-Nova Manager 显示 `Busybox setup failed`，这是刷写器环境兼容问题，不代表内核编译失败。此时优先使用 TWRP/LineageOS Recovery 的 Install 功能，或使用 Horizon Kernel Flasher 刷写 ZIP；不要在没有备份原始 `boot.img` 的情况下继续尝试。
+
+刷写前确认设备已解锁 Bootloader，并保留当前槽位的原始 `boot` 镜像。OnePlus Ace 6 是 A/B 设备，刷写后若无法启动，应从另一槽位或 Fastboot 恢复原始 boot 镜像。
