@@ -125,8 +125,12 @@ jobs:
           scripts/kconfig/merge_config.sh -m out/.config \
             arch/arm64/configs/vendor/sun_perf.config \
             arch/arm64/configs/vendor/oplus/sun_perf.config
+          # Match the official ktm BoardConfig.mk flags. These select and
+          # append the device-specific Oplus/ktm DTBs required at boot.
+          chmod +x scripts/config
+          scripts/config --file out/.config --enable OPLUS_DEVICE_DTBS
+          scripts/config --file out/.config --enable KTM_DTB
           if [ "${{ inputs.sukisu_nova }}" = 'true' ]; then
-            chmod +x scripts/config
             scripts/config --file out/.config --enable KPROBES
             scripts/config --file out/.config --enable EXT4_FS
             scripts/config --file out/.config --enable KSU
