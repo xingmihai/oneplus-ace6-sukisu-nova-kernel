@@ -66,12 +66,19 @@ jobs:
 
       - name: Clone official LineageOS kernel
         run: |
-          git clone --depth=1 --branch "$KERNEL_BRANCH" "$KERNEL_REPO" kernel
-          git -C kernel log -1 --oneline
+          mkdir -p kernel/oneplus
+          git clone --depth=1 --branch "$KERNEL_BRANCH" "$KERNEL_REPO" kernel/oneplus/sm8750
+          git clone --depth=1 --branch "$KERNEL_BRANCH" \
+            https://github.com/LineageOS/android_kernel_oneplus_sm8750-modules.git \
+            kernel/oneplus/sm8750-modules
+          git clone --depth=1 --branch "$KERNEL_BRANCH" \
+            https://github.com/LineageOS/android_kernel_oneplus_sm8750-devicetrees.git \
+            kernel/oneplus/sm8750-devicetrees
+          git -C kernel/oneplus/sm8750 log -1 --oneline
 
       - name: Integrate SukiSU-Nova and optional SUSFS
         if: inputs.sukisu_nova == true
-        working-directory: kernel
+        working-directory: kernel/oneplus/sm8750
         run: |
           if [ "${{ inputs.susfs }}" = 'true' ]; then
             # The official guide states that the builtin branch carries SUSFS.
@@ -83,7 +90,7 @@ jobs:
           fi
 
       - name: Configure kernel
-        working-directory: kernel
+        working-directory: kernel/oneplus/sm8750
         run: |
           export CROSS_COMPILE=aarch64-linux-gnu-
           export KCONFIG_CONFIG="$PWD/out/.config"
@@ -112,7 +119,7 @@ jobs:
           grep -E 'CONFIG_(KPROBES|EXT4_FS|KSU|KPM|KSU_SUSFS)=' out/.config || true
 
       - name: Build kernel Image
-        working-directory: kernel
+        working-directory: kernel/oneplus/sm8750
         run: |
           export CROSS_COMPILE=aarch64-linux-gnu-
           make -j"$(nproc)" O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
@@ -125,7 +132,7 @@ jobs:
           git clone --depth=1 "$AK3_REPO" anykernel3
           rm -rf anykernel3/.git
           cp anykernel/anykernel.sh anykernel3/anykernel.sh
-          cp kernel/out/arch/arm64/boot/Image anykernel3/Image
+          cp kernel/oneplus/sm8750/out/arch/arm64/boot/Image anykernel3/Image
           cp README.md anykernel3/README-project.md
           chmod +x anykernel3/anykernel.sh
           cd anykernel3
