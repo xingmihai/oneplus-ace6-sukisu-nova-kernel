@@ -75,6 +75,9 @@ jobs:
             https://github.com/LineageOS/android_kernel_oneplus_sm8750-devicetrees.git \
             kernel/oneplus/sm8750-devicetrees
           git -C kernel/oneplus/sm8750 log -1 --oneline
+          test -f kernel/oneplus/sm8750/drivers/base/kernelFwUpdate/Kconfig
+          test -f kernel/oneplus/sm8750/arch/arm64/configs/vendor/sun_perf.config
+          test -f kernel/oneplus/sm8750/arch/arm64/configs/vendor/oplus/sun_perf.config
 
       - name: Integrate SukiSU-Nova and optional SUSFS
         if: inputs.sukisu_nova == true
@@ -97,7 +100,8 @@ jobs:
           make O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
             CROSS_COMPILE="$CROSS_COMPILE" gki_defconfig
           scripts/kconfig/merge_config.sh -m out/.config \
-            vendor/sun_perf.config vendor/oplus/sun_perf.config
+            arch/arm64/configs/vendor/sun_perf.config \
+            arch/arm64/configs/vendor/oplus/sun_perf.config
           if [ "${{ inputs.sukisu_nova }}" = 'true' ]; then
             chmod +x scripts/config
             scripts/config --file out/.config --enable KPROBES
