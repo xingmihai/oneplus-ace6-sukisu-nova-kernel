@@ -44,6 +44,7 @@ jobs:
       CC: ccache clang
       HOSTCC: ccache gcc
       HOSTCXX: ccache g++
+      KERNEL_EXTRA_FLAGS: CONFIG_OPLUS_DEVICE_DTBS=y CONFIG_KTM_DTB=y
     steps:
       - name: Checkout build configuration
         uses: actions/checkout@v4
@@ -121,16 +122,12 @@ jobs:
           export CROSS_COMPILE=aarch64-linux-gnu-
           export KCONFIG_CONFIG="$PWD/out/.config"
           make O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
-            CROSS_COMPILE="$CROSS_COMPILE" gki_defconfig
+            CROSS_COMPILE="$CROSS_COMPILE" $KERNEL_EXTRA_FLAGS gki_defconfig
           scripts/kconfig/merge_config.sh -m out/.config \
             arch/arm64/configs/vendor/sun_perf.config \
             arch/arm64/configs/vendor/oplus/sun_perf.config
-          # Match the official ktm BoardConfig.mk flags. These select and
-          # append the device-specific Oplus/ktm DTBs required at boot.
-          chmod +x scripts/config
-          scripts/config --file out/.config --enable OPLUS_DEVICE_DTBS
-          scripts/config --file out/.config --enable KTM_DTB
           if [ "${{ inputs.sukisu_nova }}" = 'true' ]; then
+            chmod +x scripts/config
             scripts/config --file out/.config --enable KPROBES
             scripts/config --file out/.config --enable EXT4_FS
             scripts/config --file out/.config --enable KSU
@@ -144,7 +141,8 @@ jobs:
             scripts/config --file out/.config --enable KPM
           fi
           make O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
-            CROSS_COMPILE="$CROSS_COMPILE" olddefconfig
+            CROSS_COMPILE="$CROSS_COMPILE" $KERNEL_EXTRA_FLAGS olddefconfig
+          echo "Official ktm build flags: $KERNEL_EXTRA_FLAGS"
           grep -E 'CONFIG_(KPROBES|EXT4_FS|KSU|KPM|KSU_SUSFS)=' out/.config || true
 
       - name: Build kernel Image
@@ -152,7 +150,7 @@ jobs:
         run: |
           export CROSS_COMPILE=aarch64-linux-gnu-
           make -j"$(nproc)" O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
-            CROSS_COMPILE="$CROSS_COMPILE" KCFLAGS=-O2 Image
+            CROSS_COMPILE="$CROSS_COMPILE" $KERNEL_EXTRA_FLAGS KCFLAGS=-O2 Image
           test -s out/arch/arm64/boot/Image
           ccache --show-stats || true
 
