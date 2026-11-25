@@ -1,0 +1,132 @@
+name: Build ktm kernel (SukiSU-Nova + AnyKernel3)
+
+on:
+  workflow_dispatch:
+    inputs:
+      sukisu_nova:
+        description: Integrate SukiSU-Nova main branch
+        required: true
+        default: true
+        type: boolean
+      kpm:
+        description: Enable CONFIG_KPM (experimental)
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ktm-kernel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build OnePlus Ace 6 ktm kernel
+    runs-on: ubuntu-24.04
+    env:
+      KERNEL_REPO: https://github.com/LineageOS/android_kernel_oneplus_sm8750.git
+      KERNEL_BRANCH: lineage-24.0
+      AK3_REPO: https://github.com/osm0sis/AnyKernel3.git
+      ARCH: arm64
+      LLVM: 1
+      LLVM_IAS: 1
+    steps:
+      - name: Checkout build configuration
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            bc bison flex gcc-aarch64-linux-gnu libelf-dev libssl-dev \
+            libdw-dev pahole clang lld llvm cpio zip kmod
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-ktm-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-ktm-${{ runner.os }}-
+
+      - name: Configure ccache
+        run: |
+          sudo apt-get install -y --no-install-recommends ccache
+          mkdir -p "$HOME/.cache/ccache"
+          ccache --set-config=cache_dir="$HOME/.cache/ccache"
+          ccache --set-config=max_size=5G
+          ccache --zero-stats
+
+      - name: Clone official LineageOS kernel
+        run: |
+          git clone --depth=1 --branch "$KERNEL_BRANCH" "$KERNEL_REPO" kernel
+          git -C kernel log -1 --oneline
+
+      - name: Integrate SukiSU-Nova
+        if: inputs.sukisu_nova == true
+        working-directory: kernel
+        run: |
+          curl -LSs 'https://git.zako.shirkneko.top:20004/shirkneko/SukiSU/raw/branch/main/kernel/setup.sh' \
+            | bash -s builtin-new
+
+      - name: Configure kernel
+        working-directory: kernel
+        run: |
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          export KCONFIG_CONFIG="$PWD/out/.config"
+          make O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
+            CROSS_COMPILE="$CROSS_COMPILE" gki_defconfig
+          scripts/kconfig/merge_config.sh -m out/.config \
+            vendor/sun_perf.config vendor/oplus/sun_perf.config
+          if [ "${{ inputs.sukisu_nova }}" = 'true' ]; then
+            chmod +x scripts/config
+            scripts/config --file out/.config --enable KPROBES
+            scripts/config --file out/.config --enable EXT4_FS
+            scripts/config --file out/.config --enable KSU
+          fi
+          if [ "${{ inputs.kpm }}" = 'true' ]; then
+            chmod +x scripts/config
+            scripts/config --file out/.config --enable KPM
+          fi
+          make O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
+            CROSS_COMPILE="$CROSS_COMPILE" olddefconfig
+          grep -E 'CONFIG_(KPROBES|EXT4_FS|KSU|KPM)=' out/.config || true
+
+      - name: Build kernel Image
+        working-directory: kernel
+        run: |
+          export CROSS_COMPILE=aarch64-linux-gnu-
+          make -j"$(nproc)" O=out ARCH="$ARCH" LLVM="$LLVM" LLVM_IAS="$LLVM_IAS" \
+            CROSS_COMPILE="$CROSS_COMPILE" KCFLAGS=-O2 Image
+          test -s out/arch/arm64/boot/Image
+          ccache --show-stats || true
+
+      - name: Prepare AnyKernel3
+        run: |
+          git clone --depth=1 "$AK3_REPO" anykernel3
+          rm -rf anykernel3/.git
+          cp anykernel/anykernel.sh anykernel3/anykernel.sh
+          cp kernel/out/arch/arm64/boot/Image anykernel3/Image
+          cp README.md anykernel3/README-project.md
+          chmod +x anykernel3/anykernel.sh
+          cd anykernel3
+          zip -r9 "../AnyKernel3-ktm-${GITHUB_SHA::7}.zip" . \
+            -x '.git/*' 'README.md' '*placeholder*'
+
+      - name: Upload kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ktm-kernel-Image-${{ github.sha }}
+          path: kernel/out/arch/arm64/boot/Image
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload AnyKernel3 package
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnyKernel3-ktm-${{ github.sha }}
+          path: AnyKernel3-ktm-*.zip
+          if-no-files-found: error
+          retention-days: 14
