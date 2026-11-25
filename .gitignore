@@ -1,0 +1,24 @@
+# Build output
+out/
+bazel-out/
+*.img
+*.dtb
+*.dtbo
+*.ko
+*.o
+*.a
+*.cmd
+*.map
+modules.order
+Module.symvers
+
+# Android / kernel tooling
+.repo/
+.cache/
+ccache/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.swp
+.DS_Store
