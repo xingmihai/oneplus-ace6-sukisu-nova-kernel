@@ -45,6 +45,7 @@ jobs:
       HOSTCC: ccache gcc
       HOSTCXX: ccache g++
       KERNEL_EXTRA_FLAGS: CONFIG_OPLUS_DEVICE_DTBS=y CONFIG_KTM_DTB=y
+      ANDROID_CLANG_REF: clang-r596125
     steps:
       - name: Checkout build configuration
         uses: actions/checkout@v4
@@ -72,6 +73,33 @@ jobs:
           ccache --set-config=compiler_check=content
           ccache --set-config=max_size=5G
           ccache --zero-stats
+
+      - name: Restore Android Clang 22 toolchain
+        id: android-clang-cache
+        uses: actions/cache@v4
+        with:
+          path: android-clang
+          key: android-clang-${{ env.ANDROID_CLANG_REF }}-r1
+
+      - name: Install Android Clang 22 toolchain
+        if: steps.android-clang-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --filter=blob:none --no-checkout --depth=1 \
+            https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86 \
+            android-clang
+          cd android-clang
+          git sparse-checkout set \
+            "$ANDROID_CLANG_REF/bin" \
+            "$ANDROID_CLANG_REF/lib" \
+            "$ANDROID_CLANG_REF/lib64" \
+            "$ANDROID_CLANG_REF/include"
+          git checkout -q
+          test -x "$ANDROID_CLANG_REF/bin/clang"
+
+      - name: Select Android Clang 22
+        run: |
+          echo "$GITHUB_WORKSPACE/android-clang/$ANDROID_CLANG_REF/bin" >> "$GITHUB_PATH"
+          android-clang/$ANDROID_CLANG_REF/bin/clang --version
 
       - name: Clone official LineageOS kernel
         run: |
